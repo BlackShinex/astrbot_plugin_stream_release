@@ -216,7 +216,7 @@ function collect() {
   return {
     global: {
       enable: $("g_enable").checked,
-      platform_id: (state?.global?.platform_id || "爱莉").trim() || "爱莉",
+      platform_id: (state?.global?.platform_id || "").trim(),
       target_groups: groups.slice(),
       upload_group_id: $("g_upload_group").value.trim(),
       interval_minutes: Number($("g_interval").value) || 15,

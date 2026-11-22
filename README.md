@@ -1,5 +1,7 @@
 # 串流版本更新监控（astrbot_plugin_stream_release）
 
+> 仓库：https://github.com/BlackShinex/astrbot_plugin_stream_release
+
 AstrBot 插件：监控三个串流项目的 GitHub Releases，推送更新信息 + AI 摘要，并把新版本安装包自动下载、改名、上传到 QQ 群文件指定文件夹。
 
 - Foundation Sunshine：https://github.com/AlkaidLab/foundation-sunshine/releases

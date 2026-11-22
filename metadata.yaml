@@ -3,7 +3,8 @@ display_name: 串流版本更新监控
 short_desc: 监控 Sunshine / Moonlight V+ 新版，推送 AI 摘要并自动搬运安装包到群文件
 desc: 监控 Foundation Sunshine / Moonlight V+ 安卓 / Moonlight V+ PC 的 GitHub Releases：按开关推送更新信息与 AI 摘要，自动下载安装包改名上传到群文件指定文件夹；空间不足时按项目名清理旧安装包并提醒管理员。自带独立设置页面，默认配置为「全关 + 空群/空文件夹」，适合直接发布。
 version: v1.7.1
-author: blackshine
+repo: https://github.com/BlackShinex/astrbot_plugin_stream_release
+author: BlackShinex
 astrbot_version: ">=4.24.0"
 support_platforms:
   - aiocqhttp

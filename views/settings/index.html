@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>串流版本更新监控</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="header">
+        <div class="title-wrap">
+          <h1>串流版本更新监控</h1>
+          <p class="sub">Foundation Sunshine / Moonlight V+ 安卓 / Moonlight V+ PC</p>
+        </div>
+        <div class="header-actions">
+          <span id="runState" class="pill pill-idle">读取中…</span>
+          <button id="btnReload" class="btn btn-ghost" type="button">刷新</button>
+          <button id="btnCheck" class="btn btn-ghost" type="button">立即检查</button>
+          <button id="btnTestNotify" class="btn btn-ghost" type="button">测试通知</button>
+          <button id="btnTestUpload" class="btn btn-ghost" type="button">测试上传</button>
+          <button id="btnSave" class="btn btn-primary" type="button">保存设置</button>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card">
+          <h2>全局设定</h2>
+          <div class="field">
+            <label class="switch">
+              <input id="g_enable" type="checkbox" />
+              <span class="track"></span>
+              <span class="label">启用监控</span>
+            </label>
+            <p class="hint">关闭后不轮询、不推送、不搬运安装包。</p>
+          </div>
+
+          <div class="field">
+            <label class="field-label">推送到哪些群（可多选）</label>
+            <div id="groupChips" class="chips"></div>
+            <div class="inline">
+              <input id="groupInput" type="text" inputmode="numeric" placeholder="输入 QQ 群号" />
+              <button id="btnAddGroup" class="btn btn-ghost" type="button">添加</button>
+              <button id="btnPickGroups" class="btn btn-ghost" type="button">从群列表选择</button>
+            </div>
+            <div id="groupPicker" class="picker hidden">
+              <div class="picker-head">
+                <span>机器人所在的群</span>
+                <button id="btnCloseGroupPicker" class="btn btn-ghost" type="button">关闭</button>
+              </div>
+              <div id="groupList" class="picker-body">读取中…</div>
+            </div>
+            <p class="hint">每项一个群号；支持填完整 UMO（平台ID:GroupMessage:群号）。</p>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="field-label" for="g_interval">检查间隔（分钟）</label>
+              <input id="g_interval" type="number" min="1" max="1440" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="g_delay">启动后首次检查延迟（秒）</label>
+              <input id="g_delay" type="number" min="0" max="600" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="field-label" for="g_upload_group">上传群文件的群号</label>
+              <input id="g_upload_group" type="text" placeholder="留空 = 用第一个推送群" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="g_summary_chars">AI 摘要字数上限</label>
+              <input id="g_summary_chars" type="number" min="60" max="2000" />
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="field-label" for="g_provider">摘要模型 ID（留空 = 默认模型）</label>
+              <input id="g_provider" type="text" placeholder="例如 deepseek/deepseek-flash" />
+            </div>
+            <div class="field">
+              <label class="field-label">开关</label>
+              <label class="switch switch-block">
+                <input id="g_prerelease" type="checkbox" />
+                <span class="track"></span>
+                <span class="label">监控范围包含预发布版</span>
+              </label>
+              <label class="switch switch-block">
+                <input id="g_dry_run" type="checkbox" />
+                <span class="track"></span>
+                <span class="label">演练模式（不推送消息）</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>通知开关</h2>
+          <div class="field">
+            <label class="switch">
+              <input id="n_enabled" type="checkbox" />
+              <span class="track"></span>
+              <span class="label">发布通知总开关</span>
+            </label>
+            <p class="hint">关闭后所有更新信息都不推送（状态照常记录）。</p>
+          </div>
+
+          <div class="switch-list">
+            <label class="switch"><input id="n_sunshine_stable" type="checkbox" /><span class="track"></span><span class="label">Sunshine 正式版通知</span></label>
+            <label class="switch"><input id="n_sunshine_pre" type="checkbox" /><span class="track"></span><span class="label">Sunshine 预发布版通知</span></label>
+            <label class="switch"><input id="n_vplus" type="checkbox" /><span class="track"></span><span class="label">Moonlight V+（安卓）通知</span></label>
+            <label class="switch"><input id="n_pc" type="checkbox" /><span class="track"></span><span class="label">Moonlight V+ PC 通知</span></label>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>文件上传设置</h2>
+          <div class="field">
+            <label class="switch">
+              <input id="u_enabled" type="checkbox" />
+              <span class="track"></span>
+              <span class="label">文件上传总开关</span>
+            </label>
+            <p class="hint">关闭后所有项目都不下载、不上传安装包（文字通知不受影响）。</p>
+          </div>
+
+          <div class="switch-list">
+            <label class="switch"><input id="u_sunshine_stable" type="checkbox" /><span class="track"></span><span class="label">上传 Sunshine 正式版</span></label>
+            <label class="switch"><input id="u_sunshine_pre" type="checkbox" /><span class="track"></span><span class="label">上传 Sunshine 预发布版</span></label>
+            <label class="switch"><input id="u_vplus" type="checkbox" /><span class="track"></span><span class="label">上传 Moonlight V+（安卓 APK）</span></label>
+            <label class="switch"><input id="u_pc" type="checkbox" /><span class="track"></span><span class="label">上传 Moonlight V+ PC</span></label>
+          </div>
+
+          <div class="field">
+            <label class="switch">
+              <input id="u_dry_run" type="checkbox" />
+              <span class="track"></span>
+              <span class="label">上传演练模式（只下载改名，不清理不上传）</span>
+            </label>
+          </div>
+
+          <h3>群文件夹名称</h3>
+          <div class="field">
+            <label class="field-label" for="u_folder_sunshine">Sunshine 文件夹</label>
+            <div class="inline">
+              <input id="u_folder_sunshine" type="text" />
+              <button class="btn btn-ghost" type="button" data-folder-browse="u_folder_sunshine">浏览</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="u_folder_vplus">Moonlight V+ 安卓文件夹</label>
+            <div class="inline">
+              <input id="u_folder_vplus" type="text" />
+              <button class="btn btn-ghost" type="button" data-folder-browse="u_folder_vplus">浏览</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="u_folder_pc">Moonlight V+ PC 文件夹</label>
+            <div class="inline">
+              <input id="u_folder_pc" type="text" />
+              <button class="btn btn-ghost" type="button" data-folder-browse="u_folder_pc">浏览</button>
+            </div>
+          </div>
+          <p class="hint">按名称在群文件根目录匹配；<b>没填名称时，对应的文件上传开关不可开启</b>。重命名或找不到时会退回高级里的 fallback ID。</p>
+
+          <div class="row">
+            <div class="field">
+              <label class="field-label" for="u_keep">清理时保留最新几个</label>
+              <input id="u_keep" type="number" min="1" max="20" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="u_max_mb">安装包大小上限（MB）</label>
+              <input id="u_max_mb" type="number" min="1" max="4096" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="u_timeout">下载超时（秒）</label>
+              <input id="u_timeout" type="number" min="60" max="3600" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="switch">
+              <input id="u_cleanup" type="checkbox" />
+              <span class="track"></span>
+              <span class="label">空间不足时按项目名清理旧安装包</span>
+            </label>
+            <p class="hint">清理后会在群里推送文本提醒；仍不够则安装包不上传，只发 GitHub 链接。</p>
+          </div>
+
+          <details class="advanced">
+            <summary>高级：文件夹 fallback ID</summary>
+            <div class="field">
+              <label class="field-label" for="u_id_sunshine">Sunshine</label>
+              <input id="u_id_sunshine" type="text" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="u_id_vplus">Moonlight V+</label>
+              <input id="u_id_vplus" type="text" />
+            </div>
+            <div class="field">
+              <label class="field-label" for="u_id_pc">Moonlight V+ PC</label>
+              <input id="u_id_pc" type="text" />
+            </div>
+          </details>
+        </section>
+
+        <section class="card card-wide">
+          <div class="card-head">
+            <h2>运行状态 / 最近日志</h2>
+            <button id="btnLog" class="btn btn-ghost" type="button">刷新日志</button>
+          </div>
+          <pre id="logBox" class="log">保存设置或点击「刷新日志」后显示。</pre>
+        </section>
+      </main>
+
+      <div id="toast" class="toast" aria-live="polite"></div>
+
+      <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-card">
+          <p id="confirmText" class="modal-text"></p>
+          <div class="modal-actions">
+            <button id="confirmCancel" class="btn btn-ghost" type="button">取消</button>
+            <button id="confirmOk" class="btn btn-primary" type="button">继续</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

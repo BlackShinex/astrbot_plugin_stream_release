@@ -1,0 +1,212 @@
+{
+  "global": {
+    "type": "object",
+    "description": "全局设定",
+    "hint": "监控开关、推送群、检查间隔等基础设置。",
+    "items": {
+      "enable": {
+        "type": "bool",
+        "description": "启用监控",
+        "hint": "首次安装默认关闭：配置好推送群（和要用的群文件夹）后再打开。",
+        "default": false
+      },
+      "platform_id": {
+        "type": "string",
+        "description": "机器人平台 ID",
+        "hint": "留空时自动检测 aiocqhttp 平台，不用写死某个机器人名字。",
+        "default": ""
+      },
+      "target_groups": {
+        "type": "list",
+        "description": "推送到哪些群（可多选）",
+        "hint": "填 QQ 群号，每项一个；可在设置页「从群列表选择」。留空则不推送。",
+        "default": [],
+        "items": {
+          "type": "string"
+        }
+      },
+      "upload_group_id": {
+        "type": "string",
+        "description": "上传群文件的群号",
+        "hint": "留空表示用上面的第一个推送群。",
+        "default": ""
+      },
+      "interval_minutes": {
+        "type": "int",
+        "description": "检查间隔（分钟）",
+        "hint": "每隔多少分钟查一次 Releases；轮询不消耗 LLM token。",
+        "default": 15
+      },
+      "include_prerelease": {
+        "type": "bool",
+        "description": "包含预发布版",
+        "hint": "开启后预发布版也会参与通知（是否推送由「通知开关」决定）。",
+        "default": true
+      },
+      "summary_max_chars": {
+        "type": "int",
+        "description": "AI 摘要字数上限",
+        "hint": "新版本摘要的大致总字数上限。",
+        "default": 220
+      },
+      "summary_provider_id": {
+        "type": "string",
+        "description": "摘要使用的模型 ID",
+        "hint": "留空表示使用当前默认对话模型。",
+        "default": ""
+      },
+      "dry_run": {
+        "type": "bool",
+        "description": "演练模式（不推送消息）",
+        "hint": "开启后只检测和生成摘要，把消息写进日志但不发到群里。",
+        "default": false
+      },
+      "initial_delay_seconds": {
+        "type": "int",
+        "description": "启动后首次检查延迟（秒）",
+        "hint": "插件重载/重启后等多少秒再查一次。",
+        "default": 20
+      }
+    }
+  },
+  "notify": {
+    "type": "object",
+    "description": "发布通知开关",
+    "hint": "总开关 + 各项目的更新推送开关；Sunshine 分正式版/预发布版。",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "发布通知总开关",
+        "hint": "首次安装默认关闭；打开后才会推送更新信息（各项目开关见下）。",
+        "default": false
+      },
+      "sunshine_stable": {
+        "type": "bool",
+        "description": "Sunshine 正式版通知",
+        "hint": "基地版 Foundation Sunshine 的正式版发布通知。",
+        "default": true
+      },
+      "sunshine_prerelease": {
+        "type": "bool",
+        "description": "Sunshine 预发布版通知",
+        "hint": "基地版 Foundation Sunshine 的预发布版（Pre-release）通知。",
+        "default": true
+      },
+      "moonlight_vplus": {
+        "type": "bool",
+        "description": "Moonlight V+（安卓）通知",
+        "hint": "Moonlight V+ 安卓客户端更新通知。",
+        "default": true
+      },
+      "moonlight_pc": {
+        "type": "bool",
+        "description": "Moonlight V+ PC 通知",
+        "hint": "Moonlight V+ PC 客户端更新通知。",
+        "default": true
+      }
+    }
+  },
+  "upload": {
+    "type": "object",
+    "description": "文件上传设置",
+    "hint": "安装包下载、改名、上传到群文件；总开关 + 各项目开关 + 群文件夹名称。",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "文件上传总开关",
+        "hint": "首次安装默认关闭：先填群文件夹名称、打开对应项目开关，最后再打开总开关。",
+        "default": false
+      },
+      "dry_run": {
+        "type": "bool",
+        "description": "上传演练模式",
+        "hint": "开启后只下载和改名，不清理、不上传，用于验证下载链路。",
+        "default": false
+      },
+      "sunshine_stable": {
+        "type": "bool",
+        "description": "上传 Sunshine 正式版安装包",
+        "hint": "基地版 Sunshine 的正式版安装包。",
+        "default": true
+      },
+      "sunshine_prerelease": {
+        "type": "bool",
+        "description": "上传 Sunshine 预发布版安装包",
+        "hint": "默认关闭；预发布版更新频繁，会很快占满群文件空间。",
+        "default": false
+      },
+      "moonlight_vplus": {
+        "type": "bool",
+        "description": "上传 Moonlight V+（安卓）APK",
+        "hint": "上传到安卓对应的群文件夹，扩展名会改成大写 .APK。",
+        "default": true
+      },
+      "moonlight_pc": {
+        "type": "bool",
+        "description": "上传 Moonlight V+ PC 安装包",
+        "hint": "上传到 PC 对应的群文件夹。",
+        "default": true
+      },
+      "sunshine_folder_name": {
+        "type": "string",
+        "description": "Sunshine 群文件夹名称",
+        "hint": "按名称在群文件根目录匹配；**为空时不允许开启对应的文件上传开关**。",
+        "default": ""
+      },
+      "moonlight_android_folder_name": {
+        "type": "string",
+        "description": "Moonlight V+ 安卓群文件夹名称",
+        "hint": "按名称在群文件根目录匹配；**为空时不允许开启对应的文件上传开关**。",
+        "default": ""
+      },
+      "moonlight_pc_folder_name": {
+        "type": "string",
+        "description": "Moonlight V+ PC 群文件夹名称",
+        "hint": "按名称在群文件根目录匹配；**为空时不允许开启对应的文件上传开关**。",
+        "default": ""
+      },
+      "sunshine_folder_id": {
+        "type": "string",
+        "description": "Sunshine 文件夹 fallback ID",
+        "hint": "可选的高级兜底：按名称找不到时使用；一般不用填，插件会把解析到的 id 自动缓存到 state.json。",
+        "default": ""
+      },
+      "moonlight_android_folder_id": {
+        "type": "string",
+        "description": "安卓文件夹 fallback ID",
+        "hint": "可选的高级兜底：按名称找不到时使用；一般不用填，插件会把解析到的 id 自动缓存到 state.json。",
+        "default": ""
+      },
+      "moonlight_pc_folder_id": {
+        "type": "string",
+        "description": "PC 文件夹 fallback ID",
+        "hint": "可选的高级兜底：按名称找不到时使用；一般不用填，插件会把解析到的 id 自动缓存到 state.json。",
+        "default": ""
+      },
+      "cleanup_when_full": {
+        "type": "bool",
+        "description": "空间不足时清理旧安装包",
+        "hint": "按项目名删除目标文件夹里较旧的安装包（保留最新 N 个）腾出空间，并在群里提醒。",
+        "default": true
+      },
+      "cleanup_keep_count": {
+        "type": "int",
+        "description": "清理时保留最新几个",
+        "hint": "每个文件夹按项目名匹配到的安装包至少保留最新这么多个。",
+        "default": 2
+      },
+      "download_timeout_seconds": {
+        "type": "int",
+        "description": "下载超时（秒）",
+        "hint": "从 GitHub 下载安装包的最长等待时间。",
+        "default": 600
+      },
+      "asset_max_mb": {
+        "type": "int",
+        "description": "安装包大小上限（MB）",
+        "hint": "超过这个大小的资产不自动搬运，只发链接。",
+        "default": 200
+      }
+    }
+  }
+}

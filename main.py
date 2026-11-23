@@ -18,6 +18,7 @@ import urllib.parse
 import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +33,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.message_session import MessageSession
 
 PLUGIN_NAME = "astrbot_plugin_stream_release"
-PLUGIN_VERSION = "v1.7.1"
+PLUGIN_VERSION = "v1.7.2"
 
 REPOS: list[dict[str, Any]] = [
     {
@@ -747,6 +748,32 @@ class StreamReleaseMonitor(Star):
             return None
 
     # ------------------------------------------------------------ 发送（多群）
+    def _format_published(self, raw: str) -> str:
+        """把 Releases 里的 ISO 时间（2026-11-23T19:15:51Z）转成本地时间显示。"""
+        raw = (raw or "").strip()
+        if not raw:
+            return ""
+        try:
+            iso = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+            dt = datetime.fromisoformat(iso)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=datetime.timezone.utc)
+            tz_name = ""
+            try:
+                tz_name = str((self.context.get_config() or {}).get("timezone") or "")
+            except Exception:  # noqa: BLE001
+                tz_name = ""
+            if tz_name:
+                try:
+                    dt = dt.astimezone(ZoneInfo(tz_name))
+                except Exception:  # noqa: BLE001
+                    dt = dt.astimezone()
+            else:
+                dt = dt.astimezone()
+            return dt.strftime("%Y-%m-%d %H:%M")
+        except Exception:  # noqa: BLE001
+            return raw.replace("T", " ").replace("Z", "").strip()
+
     def _format_message(
         self,
         label: str,
@@ -761,8 +788,9 @@ class StreamReleaseMonitor(Star):
         lines = [f"【{label} {kind} {tag}】"]
         if prerelease:
             lines.append(PRERELEASE_NOTICE)
-        if published:
-            lines.append(f"发布时间：{published}")
+        shown_time = self._format_published(published)
+        if shown_time:
+            lines.append(f"发布时间：{shown_time}")
         lines.append(f"GitHub：{url}")
         lines.append("更新摘要：")
         lines.extend(f"- {b}" for b in bullets)

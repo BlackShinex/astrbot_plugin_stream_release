@@ -397,40 +397,84 @@ async function openGroupPicker() {
   }
 }
 
+const FOLDER_ID_INPUT = {
+  u_folder_sunshine: "u_id_sunshine",
+  u_folder_vplus: "u_id_vplus",
+  u_folder_pc: "u_id_pc",
+};
+let folderListCache = null; // { ts, group_id, folders }
+
+function withTimeout(promise, ms, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(message)), ms)),
+  ]);
+}
+
+async function fetchFolderList(force = false) {
+  const now = Date.now();
+  if (!force && folderListCache && now - folderListCache.ts < 120000) {
+    return folderListCache;
+  }
+  const result = await withTimeout(apiGet("folders" + (force ? "?refresh=1" : "")), 30000, "读取群文件夹超时（30 秒）");
+  const data = {
+    ts: now,
+    group_id: result?.group_id || "",
+    folders: result?.folders || [],
+  };
+  folderListCache = data;
+  return data;
+}
+
 async function browseFolders(inputId) {
   const target = $(inputId);
   if (!target) return;
-  let select = document.querySelector(`select[data-folder-for="${inputId}"]`);
-  if (select) {
-    select.remove();
+  const existing = document.querySelector(`select[data-folder-for="${inputId}"]`);
+  if (existing) {
+    existing.remove();
     return;
   }
-  target.disabled = true;
+  const btn = document.querySelector(`[data-folder-browse="${inputId}"]`);
+  const btnText = btn ? btn.textContent : "";
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "读取中…";
+  }
   try {
-    const result = await apiGet("folders");
-    const folders = result?.folders || [];
+    const data = await fetchFolderList(false);
+    const folders = data.folders || [];
     if (!folders.length) {
       toast("没有读到群文件夹，检查是否已配置推送群/上传群。", true);
       return;
     }
-    select = document.createElement("select");
+    const select = document.createElement("select");
     select.className = "folder-select";
     select.dataset.folderFor = inputId;
     const placeholder = document.createElement("option");
     placeholder.value = "";
-    placeholder.textContent = `选择群文件夹（当前群 ${result.group_id || ""}）`;
+    placeholder.textContent = `选择群文件夹（当前群 ${data.group_id || ""}，共 ${folders.length} 个）`;
     select.appendChild(placeholder);
     for (const f of folders) {
       const option = document.createElement("option");
       option.value = f.folder_name || "";
+      option.dataset.folderId = f.folder_id || "";
       option.textContent = `${f.folder_name}（${f.file_count || 0} 个文件）`;
       select.appendChild(option);
     }
     select.addEventListener("change", () => {
+      const picked = select.selectedOptions && select.selectedOptions[0];
       if (select.value) {
         target.value = select.value;
+        // 自动绑定 fallback ID：把选中的 folder_id 写进高级设置里对应的字段
+        const idInput = $(FOLDER_ID_INPUT[inputId]);
+        const folderId = picked?.dataset?.folderId || "";
+        if (idInput && folderId) {
+          idInput.value = folderId;
+          toast("已填入文件夹名称并自动绑定文件夹 ID");
+        } else {
+          toast(`已填入文件夹：${select.value}`);
+        }
         updateUploadConstraints();
-        toast(`已填入文件夹：${select.value}`);
       }
       select.remove();
     });
@@ -438,7 +482,10 @@ async function browseFolders(inputId) {
   } catch (err) {
     toast(`读取文件夹失败：${err?.message || err}`, true);
   } finally {
-    target.disabled = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = btnText;
+    }
   }
 }
 

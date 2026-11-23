@@ -14,6 +14,7 @@ import asyncio
 import html as html_lib
 import json
 import re
+import time
 import urllib.parse
 import uuid
 import xml.etree.ElementTree as ET
@@ -33,7 +34,7 @@ from astrbot.core.message.message_event_result import MessageChain
 from astrbot.core.platform.message_session import MessageSession
 
 PLUGIN_NAME = "astrbot_plugin_stream_release"
-PLUGIN_VERSION = "v1.7.2"
+PLUGIN_VERSION = "v1.7.3"
 
 REPOS: list[dict[str, Any]] = [
     {
@@ -123,6 +124,7 @@ class StreamReleaseMonitor(Star):
         self.target_umos: list[str] = self._build_target_umos()
         self.upload_group: int = self._resolve_upload_group()
         self._folder_cache: dict[str, str] = {}
+        self._folder_list_cache: dict[int, tuple[float, list[dict[str, Any]]]] = {}
 
         self.data_dir: Path = StarTools.get_data_dir(PLUGIN_NAME)
         self.state_file: Path = self.data_dir / "state.json"
@@ -471,6 +473,33 @@ class StreamReleaseMonitor(Star):
             self._log(f"{repo} {tag} 安装包处理失败: {exc}")
             return [f"⚠️ 安装包处理失败：{exc}"]
 
+    async def _fetch_folders(
+        self, group_id: int, timeout: float = 25.0, force: bool = False
+    ) -> list[dict[str, Any]]:
+        """读取群文件夹列表，带 5 分钟内存缓存，避免每次「浏览」都卡 4 秒以上。"""
+        key = int(group_id)
+        now = time.time()
+        cached = self._folder_list_cache.get(key)
+        if cached and not force and now - cached[0] < 300:
+            return cached[1]
+        bot = self._get_bot()
+        if bot is None:
+            raise RuntimeError("没有找到 aiocqhttp 平台实例")
+        data = await asyncio.wait_for(
+            bot.call_action("get_group_root_files", group_id=group_id), timeout=timeout
+        )
+        folders = [
+            {
+                "folder_id": str(f.get("folder_id") or ""),
+                "folder_name": str(f.get("folder_name") or ""),
+                "file_count": int(f.get("total_file_count") or 0),
+            }
+            for f in ((data or {}).get("folders") or [])
+            if isinstance(f, dict) and f.get("folder_name")
+        ]
+        self._folder_list_cache[key] = (now, folders)
+        return folders
+
     async def _resolve_folder(self, item: dict[str, Any]) -> tuple[str, str]:
         """按配置的文件夹名称解析 folder_id。
 
@@ -484,10 +513,10 @@ class StreamReleaseMonitor(Star):
         group_key = str(self.upload_group)
         state = self._load_state()
         cached = str(((state.get("folders") or {}).get(group_key) or {}).get(name) or "")
+        if cached:
+            return cached, name
         try:
-            data = await self._group_api("get_group_root_files", group_id=self.upload_group)
-            folders = (data or {}).get("folders") if isinstance(data, dict) else []
-            folders = folders or []
+            folders = await self._fetch_folders(self.upload_group)
             exact = next((f for f in folders if str(f.get("folder_name")) == name), None)
             if exact is None and name:
                 exact = next((f for f in folders if name in str(f.get("folder_name"))), None)
@@ -977,21 +1006,16 @@ class StreamReleaseMonitor(Star):
         group_id = self.upload_group or self._resolve_upload_group()
         if not group_id:
             return error_response("还没有配置推送群/上传群，无法读取群文件")
+        force = False
         try:
-            bot = self._get_bot()
-            if bot is None:
-                return error_response("没有找到 aiocqhttp 平台实例，无法读取群文件")
-            data = await bot.call_action("get_group_root_files", group_id=group_id)
-            folders = [
-                {
-                    "folder_id": str(f.get("folder_id") or ""),
-                    "folder_name": str(f.get("folder_name") or ""),
-                    "file_count": int(f.get("total_file_count") or 0),
-                }
-                for f in ((data or {}).get("folders") or [])
-                if isinstance(f, dict) and f.get("folder_name")
-            ]
-            return json_response({"group_id": group_id, "folders": folders})
+            force = bool(request.query.get("refresh"))
+        except Exception:  # noqa: BLE001
+            force = False
+        try:
+            folders = await self._fetch_folders(group_id, timeout=25.0, force=force)
+            return json_response({"group_id": group_id, "folders": folders, "cached": not force})
+        except asyncio.TimeoutError:
+            return error_response("读取群文件夹超时（25 秒），稍后重试或检查机器人/QQ 连接")
         except Exception as exc:  # noqa: BLE001
             return error_response(f"获取群文件夹失败：{exc}")
 
@@ -1262,6 +1286,7 @@ class StreamReleaseMonitor(Star):
         self.target_umos = self._build_target_umos()
         self.upload_group = self._resolve_upload_group()
         self._folder_cache = {}
+        self._folder_list_cache = {}
 
         running = bool(self._task and not self._task.done())
         if self.enable and not running:
